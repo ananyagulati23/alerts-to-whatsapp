@@ -1,0 +1,12 @@
+# secrets & local config
+.env
+
+# python
+.venv/
+__pycache__/
+*.pyc
+seen.db
+
+# node bridge
+bridge/node_modules/
+bridge/auth/

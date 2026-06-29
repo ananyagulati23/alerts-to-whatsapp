@@ -1,0 +1,50 @@
+name: news-to-telegram
+
+# Runs on a schedule (and on-demand). GitHub often delays scheduled runs by
+# 10-20 min and may skip some under load — fine for a news feed, since the
+# look-back window + de-dupe absorb gaps.
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # roughly every 15 minutes
+  workflow_dispatch:          # lets you trigger a run manually from the Actions tab
+
+# Never run two copies at once (would double-post / race on seen.db).
+concurrency:
+  group: news-to-telegram
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Carry the "already posted" DB across runs so nothing double-fires.
+      # A unique key each run always saves a fresh copy; restore-keys pulls
+      # the most recent previous one.
+      - name: Restore de-dupe DB
+        uses: actions/cache@v4
+        with:
+          path: seen.db
+          key: seen-db-${{ github.run_id }}
+          restore-keys: |
+            seen-db-
+
+      - name: Fetch news and post to Telegram
+        env:
+          SOURCE: rss
+          ALERT_FEEDS: ${{ secrets.ALERT_FEEDS }}
+          PROVIDER: telegram
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Optional: set a GROQ_API_KEY secret to enable relevance scoring.
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python alerts_to_whatsapp.py
