@@ -114,6 +114,9 @@ DB_PATH = os.environ.get("SEEN_DB", "seen.db")
 LOOP_INTERVAL = int(os.environ.get("LOOP_INTERVAL", "900"))  # 15 min
 # Be polite between sends so the linked number reads as human, not a firehose.
 SEND_DELAY = float(os.environ.get("SEND_DELAY", "4"))
+# Cap how many items to post per run (0 = no limit). Overflow is left unseen
+# and goes out on the next run, so nothing is lost — bursts just get paced.
+MAX_POSTS_PER_RUN = int(os.environ.get("MAX_POSTS_PER_RUN", "0"))
 
 USER_AGENT = "alerts-to-whatsapp/1.0 (+https://github.com/)"
 
@@ -460,6 +463,10 @@ def run_once(dry_run=False):
                 mark_seen(conn, key)
                 mark_seen(conn, ckey)
             posted += 1
+            if MAX_POSTS_PER_RUN and posted >= MAX_POSTS_PER_RUN:
+                log.info("reached per-run cap (%d); the rest will post next run",
+                         MAX_POSTS_PER_RUN)
+                break
             if not dry_run:
                 time.sleep(SEND_DELAY)
     log.info(
