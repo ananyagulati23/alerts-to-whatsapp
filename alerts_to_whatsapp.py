@@ -339,8 +339,13 @@ def gather_items():
 # --------------------------------------------------------------------------- #
 
 def passes_score(title):
-    """Return True if the item clears SCORE_THRESHOLD (or scoring is off)."""
-    if not GROQ_API_KEY:
+    """Return True if the item clears SCORE_THRESHOLD (or scoring is off).
+
+    The relevance gate is independent of newsletter tagging: set
+    SCORE_THRESHOLD=0 to keep it off (so a GROQ_API_KEY only powers tagging),
+    or raise it to drop off-topic items.
+    """
+    if not GROQ_API_KEY or SCORE_THRESHOLD <= 0:
         return True
     prompt = (
         f"Rate from 0 to 100 how relevant this headline is to: {SCORE_TOPIC}.\n"

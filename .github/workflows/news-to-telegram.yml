@@ -44,6 +44,7 @@ jobs:
           ALERT_FEEDS: ${{ secrets.ALERT_FEEDS }}
           MAX_POSTS_PER_RUN: '5'   # cap per run; overflow goes out next run
           NEWSLETTER_MODE: tag     # tag newsletter-worthy items (needs GROQ_API_KEY)
+          SCORE_THRESHOLD: '0'     # relevance gate off; tagging only (no dropping)
           PROVIDER: telegram
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
