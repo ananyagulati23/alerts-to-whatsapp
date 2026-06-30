@@ -43,9 +43,11 @@ jobs:
           SOURCE: rss
           ALERT_FEEDS: ${{ secrets.ALERT_FEEDS }}
           MAX_POSTS_PER_RUN: '5'   # cap per run; overflow goes out next run
+          NEWSLETTER_MODE: tag     # tag newsletter-worthy items (needs GROQ_API_KEY)
           PROVIDER: telegram
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Optional: set a GROQ_API_KEY secret to enable relevance scoring.
+          # Set a GROQ_API_KEY secret to activate newsletter tagging (and the
+          # optional relevance gate). Free key at console.groq.com.
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python alerts_to_whatsapp.py

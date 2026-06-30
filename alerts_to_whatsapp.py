@@ -107,6 +107,21 @@ SCORE_TOPIC = os.environ.get(
     "DPOs and privacy engineers in India and the GCC",
 )
 
+# --- Optional newsletter-fit pass (needs GROQ_API_KEY) ---------------------- #
+# Judges whether each headline is a strong pick for your newsletter.
+#   "off"    -> do nothing (default)
+#   "tag"    -> post everything, but prefix newsletter-worthy items with a tag
+#   "filter" -> only post newsletter-worthy items (drops confident "no"s)
+NEWSLETTER_MODE = os.environ.get("NEWSLETTER_MODE", "off").lower()
+NEWSLETTER_TAG = os.environ.get("NEWSLETTER_TAG", "⭐ NEWSLETTER PICK")
+NEWSLETTER_CRITERIA = os.environ.get(
+    "NEWSLETTER_CRITERIA",
+    "substantive developments — new laws or regulations, major enforcement or "
+    "fines, significant breaches, notable policy or industry shifts, important "
+    "research, or product moves with broad impact; NOT press releases, product "
+    "listings, vendor marketing, minor or local items, or clickbait",
+)
+
 # --- Misc ------------------------------------------------------------------- #
 # Where to keep the "already posted" record so nothing double-fires.
 DB_PATH = os.environ.get("SEEN_DB", "seen.db")
@@ -354,6 +369,42 @@ def passes_score(title):
         return True
 
 
+def newsletter_fit(title):
+    """Editorial verdict: is this headline a strong newsletter pick?
+
+    Returns True (good fit), False (not a fit), or None when undecidable
+    (feature off, no API key, or the call errored). None never drops news.
+    """
+    if NEWSLETTER_MODE not in ("tag", "filter") or not GROQ_API_KEY:
+        return None
+    prompt = (
+        f"You are the editor of a newsletter on: {SCORE_TOPIC}.\n"
+        f"Decide if this news headline is a strong fit to feature. "
+        f"Good fits are: {NEWSLETTER_CRITERIA}.\n"
+        f"Answer with only YES or NO.\n\nHeadline: {title}"
+    )
+    try:
+        r = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+            json={
+                "model": GROQ_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0,
+                "max_tokens": 3,
+            },
+            timeout=20,
+        )
+        r.raise_for_status()
+        ans = r.json()["choices"][0]["message"]["content"].strip().upper()
+        fit = ans.startswith("Y")
+        log.info("  newsletter:%-3s %s", "YES" if fit else "no", title[:55])
+        return fit
+    except Exception as exc:
+        log.warning("  newsletter check failed (%s); not tagging", exc)
+        return None
+
+
 # --------------------------------------------------------------------------- #
 # WHATSAPP SEND                                                                #
 # --------------------------------------------------------------------------- #
@@ -458,7 +509,16 @@ def run_once(dry_run=False):
                 mark_seen(conn, key)    # seen but filtered out; don't re-score
                 mark_seen(conn, ckey)
             continue
-        if send_to_group(format_message(label, title, url, published), dry_run):
+        verdict = newsletter_fit(title)
+        if NEWSLETTER_MODE == "filter" and verdict is False:
+            if not dry_run:
+                mark_seen(conn, key)    # not a newsletter fit; drop and remember
+                mark_seen(conn, ckey)
+            continue
+        msg = format_message(label, title, url, published)
+        if NEWSLETTER_MODE == "tag" and verdict is True:
+            msg = f"{NEWSLETTER_TAG}\n{msg}"
+        if send_to_group(msg, dry_run):
             if not dry_run:
                 mark_seen(conn, key)
                 mark_seen(conn, ckey)
