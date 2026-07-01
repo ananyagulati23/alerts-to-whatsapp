@@ -325,13 +325,20 @@ def gather_rss():
 
 
 def gather_items():
-    """Dispatch to the configured news source."""
-    if SOURCE == "gdelt":
-        yield from gather_gdelt()
-    elif SOURCE == "rss":
-        yield from gather_rss()
-    else:
-        log.error("unknown SOURCE: %s (use 'gdelt' or 'rss')", SOURCE)
+    """Dispatch to the configured news source(s).
+
+    SOURCE may be a single source or a comma-separated list, e.g. "gdelt,rss",
+    to pull from several at once (the content de-dupe collapses overlaps).
+    """
+    for src in (s.strip() for s in SOURCE.split(",")):
+        if not src:
+            continue
+        if src == "gdelt":
+            yield from gather_gdelt()
+        elif src == "rss":
+            yield from gather_rss()
+        else:
+            log.error("unknown SOURCE: %s (use 'gdelt' and/or 'rss')", src)
 
 
 # --------------------------------------------------------------------------- #

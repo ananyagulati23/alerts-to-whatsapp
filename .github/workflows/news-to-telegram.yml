@@ -40,8 +40,13 @@ jobs:
 
       - name: Fetch news and post to Telegram
         env:
-          SOURCE: rss
+          # Two sources: GDELT (reliable, real-time) + your Google Alert RSS
+          # (curated, but often sparse). De-dupe collapses any overlap.
+          SOURCE: gdelt,rss
           ALERT_FEEDS: ${{ secrets.ALERT_FEEDS }}
+          GDELT_QUERY: '("data privacy" OR "data protection" OR "AI governance" OR "AI regulation" OR "AI safety" OR cybersecurity OR "data breach" OR ransomware OR cyberattack OR Anthropic OR OpenAI) sourcelang:english'
+          GDELT_TIMESPAN: '3h'     # look-back window (runs fire every 1-2h)
+          GDELT_MAX: '25'
           MAX_POSTS_PER_RUN: '5'   # cap per run; overflow goes out next run
           NEWSLETTER_MODE: tag     # tag newsletter-worthy items (needs GROQ_API_KEY)
           SCORE_THRESHOLD: '0'     # relevance gate off; tagging only (no dropping)
