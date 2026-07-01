@@ -40,16 +40,14 @@ jobs:
 
       - name: Fetch news and post to Telegram
         env:
-          # Two sources: GDELT (reliable, real-time) + your Google Alert RSS
-          # (curated, but often sparse). De-dupe collapses any overlap.
-          SOURCE: gdelt,rss
+          # Reliable news-site RSS feeds + the Google Alert (all in the
+          # ALERT_FEEDS secret). GDELT was dropped — it 429-rate-limits the
+          # shared GitHub Actions IPs.
+          SOURCE: rss
           ALERT_FEEDS: ${{ secrets.ALERT_FEEDS }}
-          GDELT_QUERY: '("data privacy" OR "data protection" OR "AI governance" OR "AI regulation" OR "AI safety" OR cybersecurity OR "data breach" OR ransomware OR cyberattack OR Anthropic OR OpenAI) sourcelang:english'
-          GDELT_TIMESPAN: '3h'     # look-back window (runs fire every 1-2h)
-          GDELT_MAX: '25'
           MAX_POSTS_PER_RUN: '5'   # cap per run; overflow goes out next run
-          NEWSLETTER_MODE: tag     # tag newsletter-worthy items (needs GROQ_API_KEY)
-          SCORE_THRESHOLD: '0'     # relevance gate off; tagging only (no dropping)
+          NEWSLETTER_MODE: filter  # only newsletter-worthy items post (needs GROQ_API_KEY)
+          SCORE_THRESHOLD: '0'     # relevance gate off; newsletter filter does the curation
           PROVIDER: telegram
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
